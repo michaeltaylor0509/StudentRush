@@ -50,7 +50,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: e3026ba435ee32e468db2b726eed6cf2, type: 3}
       propertyPath: m_Name
-      value: road_slantHigh
+      value: Rampa
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: e3026ba435ee32e468db2b726eed6cf2, type: 3}
       propertyPath: m_Layer
