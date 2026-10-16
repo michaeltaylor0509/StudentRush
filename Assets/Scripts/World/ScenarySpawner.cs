@@ -1,111 +1,104 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// Pone las calles una detrás de otra a distancia fija y las mueve hacia el jugador.
-// Las primeras calles son vacías. Las que quedan atrás se guardan y se reutilizan.
+// Pone las calles una detrás de otra y las mueve hacia el jugador.
+// Las que quedan atrás se apagan y se reutilizan (pooling).
 public class ScenerySpawner : MonoBehaviour
 {
-    [SerializeField] private GameObject[] streetPrefabs;   // Calles con obstáculos
-    [SerializeField] private GameObject emptyStreetPrefab; // Calle sin obstáculos
-    [SerializeField] private int startEmptyTiles = 3;      // Calles vacías al empezar
-    [SerializeField] private float tileScale = 3f;         // Tamaño de las calles
+    public GameObject[] streetPrefabs;    // calles con obstáculos
+    public GameObject emptyStreetPrefab;  // calle sin obstáculos
+    public int startEmptyTiles = 3;       // calles vacías al empezar
+    public float tileScale = 3f;          // tamaño de las calles
 
-    [Header("Los 3 números que ajustas tú")]
-    [SerializeField] private float streetLength = 30f;     // Largo de cada calle (para que no haya huecos ni solapes)
-    [SerializeField] private float offsetX = 0f;           // Mueve la calle a los lados hasta que AJ quede en medio de la carretera
-    [SerializeField] private float offsetY = 0f;           // Sube o baja la calle hasta que AJ pise el suelo
+    public float streetLength = 30f;      // largo de cada calle
+    public float offsetX = 0f;            // para centrar la carretera
+    public float offsetY = 0f;            // para que AJ pise el suelo
 
-    [SerializeField] private float viewDistance = 120f;    // Hasta dónde hay calle por delante
-    [SerializeField] private float startZ = -10f;          // Dónde empieza la primera
-    [SerializeField] private float recycleZ = -45f;        // Si el final de una calle pasa de aquí, se guarda
+    public float viewDistance = 120f;     // hasta dónde hay calle por delante
+    public float startZ = -10f;           // dónde empieza la primera
+    public float recycleZ = -45f;         // si una calle pasa de aquí, se apaga
 
-    private class Tile
-    {
-        public GameObject go;
-        public GameObject prefab;
-        public float startZ; // Dónde empieza esta calle
-    }
+    List<GameObject> active = new List<GameObject>(); // calles en pantalla, en orden
+    List<GameObject> stored = new List<GameObject>(); // calles apagadas, para reutilizar
+    float nextZ;                                      // dónde empieza la siguiente calle
+    int placedCount;                                  // cuántas calles he puesto
+    GameObject lastPrefab;                            // la última elegida, para no repetirla
 
-    private readonly List<Tile> active = new List<Tile>();
-    private readonly Dictionary<GameObject, Stack<Tile>> pool = new Dictionary<GameObject, Stack<Tile>>();
-
-    private float nextZ;           // Dónde empieza la siguiente calle
-    private int placedCount;
-    private GameObject lastPrefab;
-
-    private void Start()
+    void Start()
     {
         nextZ = startZ;
         Fill();
     }
 
-    private void Fill()
+    void Update()
+    {
+        // lo que se mueve el mundo este frame (0 si hay pausa o game over)
+        float move = GameManager.Instance.GetSpeed() * Time.deltaTime;
+
+        // muevo todas las calles hacia el jugador
+        foreach (GameObject street in active)
+            street.transform.position += Vector3.back * move;
+        nextZ -= move; // el final de la fila también se acerca
+
+        // si la primera ya quedó detrás, la apago y la guardo
+        if (active.Count > 0 && active[0].transform.position.z + streetLength < recycleZ)
+        {
+            GameObject old = active[0];
+            active.RemoveAt(0);
+            old.SetActive(false);
+            stored.Add(old);
+        }
+
+        Fill();
+    }
+
+    // pone calles hasta llegar a la distancia de visión
+    void Fill()
     {
         while (nextZ < viewDistance)
         {
-            Tile tile = GetTile(ChoosePrefab());
-            tile.startZ = nextZ;
-            tile.go.transform.position = new Vector3(offsetX, offsetY, nextZ);
-            tile.go.SetActive(true);
+            GameObject street = GetStreet(ChoosePrefab());
 
-            active.Add(tile);
-            nextZ += streetLength;
+            street.transform.position = new Vector3(offsetX, offsetY, nextZ);
+            street.SetActive(true);
+
+            active.Add(street);
+            nextZ += streetLength; // la siguiente empieza donde acaba esta
             placedCount++;
         }
     }
 
-    private GameObject ChoosePrefab()
+    // las primeras son vacías, después al azar sin repetir la anterior
+    GameObject ChoosePrefab()
     {
         if (placedCount < startEmptyTiles && emptyStreetPrefab != null)
             return emptyStreetPrefab;
 
         GameObject chosen = streetPrefabs[Random.Range(0, streetPrefabs.Length)];
 
-        // Que no salga la misma dos veces seguidas
-        if (streetPrefabs.Length > 1)
-        {
-            while (chosen == lastPrefab)
-                chosen = streetPrefabs[Random.Range(0, streetPrefabs.Length)];
-        }
+        // si sale la misma que la anterior, vuelvo a elegir
+        while (streetPrefabs.Length > 1 && chosen == lastPrefab)
+            chosen = streetPrefabs[Random.Range(0, streetPrefabs.Length)];
 
         lastPrefab = chosen;
         return chosen;
     }
 
-    // Saca una calle guardada o crea una nueva
-    private Tile GetTile(GameObject prefab)
+    // busca una calle guardada de ese prefab; si no hay, crea una nueva
+    GameObject GetStreet(GameObject prefab)
     {
-        if (pool.ContainsKey(prefab) && pool[prefab].Count > 0)
-            return pool[prefab].Pop();
+        foreach (GameObject s in stored)
+        {
+            // las copias que crea Unity se llaman "NombreDelPrefab(Clone)"
+            if (s.name == prefab.name + "(Clone)")
+            {
+                stored.Remove(s);
+                return s;
+            }
+        }
 
-        GameObject go = Instantiate(prefab, transform);
+        GameObject go = Instantiate(prefab, transform); // la creo dentro del spawner
         go.transform.localScale = Vector3.one * tileScale;
-        return new Tile { go = go, prefab = prefab };
-    }
-
-    private void Update()
-    {
-        float move = GameManager.Instance.Speed * Time.deltaTime;
-
-        foreach (Tile tile in active)
-        {
-            tile.startZ -= move;
-            tile.go.transform.position = new Vector3(offsetX, offsetY, tile.startZ);
-        }
-        nextZ -= move;
-
-        // Si la primera ya quedó detrás, la guardamos
-        while (active.Count > 0 && active[0].startZ + streetLength < recycleZ)
-        {
-            Tile first = active[0];
-            active.RemoveAt(0);
-            first.go.SetActive(false);
-
-            if (!pool.ContainsKey(first.prefab))
-                pool[first.prefab] = new Stack<Tile>();
-            pool[first.prefab].Push(first);
-        }
-
-        Fill();
+        return go;
     }
 }

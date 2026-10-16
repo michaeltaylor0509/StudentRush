@@ -1,44 +1,38 @@
 using UnityEngine;
 
-// Cámara en tercera persona estilo Subway Surfers:
-// sigue al jugador casi al instante en horizontal y un poco en vertical.
+// Cámara estilo Subway Surfers sigue al jugador casi al instante.
 public class CameraFollow : MonoBehaviour
 {
-    [SerializeField] private PlayerController player;                   // El Player
-    [SerializeField] private Vector3 offset = new Vector3(0f, 5f, -8f); // Posición base respecto al jugador
+    public PlayerController player;                   // refencia al jugador al que sigue
+    public Vector3 offset = new Vector3(0f, 5f, -8f); // Dónde está la cámara respecto al jugador
 
-    [Header("Seguimiento")]
-    [Range(0f, 1f)]
-    [SerializeField] private float horizontalFollow = 0.8f; // 0 = fija, 1 = pegada al jugador
-    [Range(0f, 1f)]
-    [SerializeField] private float verticalFollow = 0.3f;   // Cuánto sube al saltar
-    [SerializeField] private float slideDrop = 1f;          // Cuántos metros baja al deslizar
+    public float horizontalFollow = 0.8f; // 0 = fija, 1 = pegada al jugador al moverse de lado
+    public float verticalFollow = 0.8f;   // Cuánto sube la cámara cuando el jugador salta
+    public float slideDrop = 1.5f;          // Cuánto baja la cámara al deslizar
+    public float smooth = 12f;            // Rapidez de la cámara (más alto = más instantánea)
 
-    [Header("Suavidad")]
-    [SerializeField] private float horizontalSmooth = 15f;  // Más alto = más instantánea
-    [SerializeField] private float verticalSmooth = 8f;
-
+    // LateUpdate va después de Update: el jugador ya se ha movido y la cámara no tiembla
     private void LateUpdate()
     {
-        if (player == null) return;
+        Vector3 p = player.transform.position; // Dónde está el jugador
 
-        Vector3 playerPos = player.transform.position;
+        // A dónde queremos que vaya la cámara
+        // offset.x posición base camara (0, centrada) y p.x * horizontalFollow cuanto se ha movido
+        float x = offset.x + p.x * horizontalFollow;
+        // offset.y es la altura base de la cámara sobre el suelo, player.groundY es la altura del suelo sobre
+        // la calle sumando para que la cámara se mida sobre el suelo y luego (p.y - player.groundY) * verticalFollow
+        // para ver cuanto ha subido AJ sobre el suelo multiplicando por verticalFollow
+        // y lo de p.y - player.groundY hace que funcione en rampas tmb
+        float y = offset.y + player.groundY + (p.y - player.groundY) * verticalFollow;
+        // como no avanza en z esto nunca cambia
+        float z = p.z + offset.z;
 
-        // Horizontal: casi igual que el jugador
-        float targetX = offset.x + playerPos.x * horizontalFollow;
+        // Si desliza la cámara baja un poco
+        if (player.isSliding)
+            y -= slideDrop;
 
-        // Vertical: altura base + una parte del salto o de la rampa
-        float heightAboveGround = playerPos.y - player.GroundY;
-        float targetY = offset.y + player.GroundY + heightAboveGround * verticalFollow;
-        if (player.IsSliding) targetY -= slideDrop;
-
-        // Profundidad fija
-        float targetZ = playerPos.z + offset.z;
-
-        Vector3 pos = transform.position;
-        pos.x = Mathf.Lerp(pos.x, targetX, horizontalSmooth * Time.deltaTime);
-        pos.y = Mathf.Lerp(pos.y, targetY, verticalSmooth * Time.deltaTime);
-        pos.z = targetZ;
-        transform.position = pos;
+        // La cámara se acerca suavemente a ese punto
+        Vector3 target = new Vector3(x, y, z);
+        transform.position = Vector3.Lerp(transform.position, target, smooth * Time.deltaTime);
     }
 }

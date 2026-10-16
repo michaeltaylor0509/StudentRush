@@ -2,103 +2,87 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
-// Los estados posibles de la partida
-public enum GameState { Ready, Playing, Paused, GameOver }
-
-// El "cerebro" del juego: sabe en qué estado está la partida
-// y a qué velocidad se mueve el mundo.
+// El "cerebro" del juego: sabe si estamos jugando, en pausa o hemos perdido.
 public class GameManager : MonoBehaviour
 {
-    // Singleton: cualquier script puede usar GameManager.Instance para hablar con él
-    public static GameManager Instance { get; private set; }
+    // Esto permite que otros scripts escriban GameManager.Instance para hablar con él
+    public static GameManager Instance;
 
-    [SerializeField] private float speed = 10f;        // Velocidad del mundo en metros por segundo
-    [SerializeField] private bool autoStart = true;    // Si está marcada, la partida empieza sola al dar Play (para probar)
-    [SerializeField] private PlayerController player;  // El jugador, para hacerle caer al perder
+    public float speed = 10f;        // Velocidad del mundo (metros por segundo)
+    public PlayerController player;  // El jugador, para hacerle caer al perder
 
-    // Los demás scripts pueden leer estos valores, pero solo el GameManager los cambia
-    public GameState State { get; private set; } = GameState.Ready;
-    public float Distance { get; private set; }        // Metros recorridos
-
-    // Velocidad del mundo: solo se mueve mientras se juega
-    public float Speed => State == GameState.Playing ? speed : 0f;
+    public bool isPaused = false;    // ¿Está en pausa? booleano para verlo empieza en no (false)
+    public bool isGameOver = false;  // ¿Hemos perdido? aqui lo mismo
+    public float distance = 0f;      // Metros recorridos esto servirá para la puntuaciónm
 
     private void Awake()
     {
         Instance = this;
-        Time.timeScale = 1f; // Por si venimos de reiniciar estando en pausa
+        Time.timeScale = 1f; // El tiempo corre normal a velocidad x1
     }
 
-    private void Start()
+    // ¿Se está jugando? booleano de si está jugando, si no estamos en pausa ni hemos perdido
+    public bool IsPlaying()
     {
-        // Si Auto Start está marcada, empezamos directamente
-        if (autoStart) StartRun();
+        return !isPaused && !isGameOver;
+    }
+
+    // un get de obtener la velocidad y si no se esta jugando no tiene velocidad
+    public float GetSpeed()
+    {
+        if (IsPlaying())
+            return speed;
+        return 0f;
     }
 
     private void Update()
     {
+        // Sumamos los metros recorridos
+        distance += GetSpeed() * Time.deltaTime;
+
         Keyboard kb = Keyboard.current;
-        if (kb == null) return;
 
-        switch (State)
+        // Esc para pausar o continuar && solo si no hemos perdido)
+        if (kb.escapeKey.wasPressedThisFrame && !isGameOver)
         {
-            case GameState.Ready:
-                if (kb.enterKey.wasPressedThisFrame) StartRun();       // Enter: empezar
-                break;
-
-            case GameState.Playing:
-                if (kb.escapeKey.wasPressedThisFrame)
-                {
-                    Pause();                                           // Esc: pausar
-                    break;
-                }
-                Distance += Speed * Time.deltaTime;                    // Sumamos lo recorrido
-                break;
-
-            case GameState.Paused:
-                if (kb.escapeKey.wasPressedThisFrame) Resume();        // Esc: continuar
-                else if (kb.rKey.wasPressedThisFrame) Restart();       // R: reiniciar
-                break;
-
-            case GameState.GameOver:
-                if (kb.rKey.wasPressedThisFrame) Restart();            // R: reiniciar
-                break;
+            if (isPaused)
+                Resume();
+            else
+                Pause();
         }
-    }
 
-    private void StartRun()
-    {
-        State = GameState.Playing;
-        Debug.Log("Partida empezada");
+        // R para reiniciar && en pausa o al perder
+        if (kb.rKey.wasPressedThisFrame && !IsPlaying())
+        {
+            Restart();
+        }
     }
 
     public void Pause()
     {
-        State = GameState.Paused;
-        Time.timeScale = 0f; // Congela el tiempo del juego
-        Debug.Log("Pausa");
+        isPaused = true;
+        Time.timeScale = 0f; // Congela el tiempo
+        // aqui irá en el futuro lo de los menús
     }
 
     public void Resume()
     {
-        State = GameState.Playing;
-        Time.timeScale = 1f; // El tiempo vuelve a la normalidad
-        Debug.Log("Continuar");
+        isPaused = false;
+        Time.timeScale = 1f; // Descongela el tiempo
+        // aqui irá en un futuro lo de los menús
     }
 
     public void GameOver()
     {
-        if (State != GameState.Playing) return; // Solo se puede perder jugando
+        if (isGameOver) return; // Si ya hemos perdido no hacemos nada
 
-        State = GameState.GameOver;
+        isGameOver = true;
         player.Die();
-        Debug.Log("Game Over. Pulsa R para reiniciar");
     }
 
-    // Vuelve a cargar la escena desde el principio
+    // Vuelve a cargar la escena desde cero
     public void Restart()
     {
-        Time.timeScale = 1f;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name); // reiniciar
     }
 }
