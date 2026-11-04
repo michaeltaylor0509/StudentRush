@@ -237,4 +237,9 @@ public class PlayerController : MonoBehaviour
         isDead = true;
         animator.SetTrigger("Die");
     }
+    // devuelve el carril actual (0 a 3) para que el spawner decida en el cruce
+    public int GetLane()
+    {
+        return currentLane;
+    }
 }
