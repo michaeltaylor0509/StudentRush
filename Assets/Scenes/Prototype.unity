@@ -14,12 +14,12 @@ OcclusionCullingSettings:
 RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 10
-  m_Fog: 0
-  m_FogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
-  m_FogMode: 3
+  m_Fog: 1
+  m_FogColor: {r: 0.08472758, g: 0.38828772, b: 0.5283019, a: 1}
+  m_FogMode: 1
   m_FogDensity: 0.01
-  m_LinearFogStart: 0
-  m_LinearFogEnd: 300
+  m_LinearFogStart: 80
+  m_LinearFogEnd: 170
   m_AmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
   m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
   m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
@@ -93,7 +93,7 @@ LightmapSettings:
     m_ExportTrainingData: 0
     m_TrainingDataDestination: TrainingData
     m_LightProbeSampleCountMultiplier: 4
-  m_LightingDataAsset: {fileID: 20201, guid: 0000000000000000f000000000000000, type: 0}
+  m_LightingDataAsset: {fileID: 112000000, guid: d8bbafd4952661c4f848c16d6f38c023, type: 2}
   m_LightingSettings: {fileID: 0}
 --- !u!196 &4
 NavMeshSettings:
@@ -384,8 +384,8 @@ MonoBehaviour:
   laneDistance: 6
   laneChangeSpeed: 6
   startLane: 1
-  jumpForce: 9
-  gravity: -25
+  jumpForce: 10
+  gravity: -30
   fallMultiplier: 1.8
   groundY: 0
   slideDuration: 1
@@ -645,7 +645,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 60
+  field of view: 70
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -735,8 +735,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraFollow
   player: {fileID: 292571422}
-  offset: {x: 0, y: 3, z: -5}
-  horizontalFollow: 0.8
+  offset: {x: 0, y: 2, z: -3}
+  horizontalFollow: 0.9
   verticalFollow: 0.8
   slideDrop: 1.5
   smooth: 12
@@ -964,18 +964,19 @@ MonoBehaviour:
   - {fileID: 7271949514945332504, guid: 221fbe5317a711e41989da663062754d, type: 3}
   - {fileID: 7271949514945332504, guid: eadc0e26f6d2c634687a23a76fda8760, type: 3}
   - {fileID: 7271949514945332504, guid: 34e2cacc49fe1834b9f683a296c9ab7b, type: 3}
-  weights:
-  - 4
-  - 1
-  - 2
+  weights: 050000000200000003000000i
   maxInARow: 030000000100000002000000i
   emptyStreetPrefab: {fileID: 7271949514945332504, guid: 57534ca78b958094cae14e47b6159d84, type: 3}
   startEmptyTiles: 3
+  crossroadPrefab: {fileID: 7271949514945332504, guid: a7864877f2e61894c8cd7e14182e24d6, type: 3}
+  streetsBetweenCrossroads: 8
+  decisionDistance: 10
+  armStreets: 4
   tileScale: 1
   streetLength: 30
   offsetX: 0
   offsetY: 0
-  viewDistance: 120
+  viewDistance: 180
   startZ: -10
   recycleZ: -45
 --- !u!1 &900877128
@@ -1787,7 +1788,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 08899d679c747e64e9ee8c793ab456a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  speed: 10
+  speed: 15
   player: {fileID: 292571422}
   isStarted: 0
   isPaused: 0
@@ -2234,6 +2235,10 @@ PrefabInstance:
     - target: {fileID: 4623501346566010854, guid: 1c2f649bb73f3c64e8f0bd6c2efb3cf5, type: 3}
       propertyPath: m_Name
       value: Road_Crossroads_1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4623501346566010854, guid: 1c2f649bb73f3c64e8f0bd6c2efb3cf5, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5431949553901972828, guid: 1c2f649bb73f3c64e8f0bd6c2efb3cf5, type: 3}
       propertyPath: m_LocalPosition.x
@@ -2792,7 +2797,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1906839179
 MonoBehaviour:
   m_ObjectHideFlags: 0
