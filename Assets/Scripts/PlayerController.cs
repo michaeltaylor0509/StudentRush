@@ -23,7 +23,7 @@ public class PlayerController : MonoBehaviour
     float slideTimer;                     // cuenta atrás del deslizamiento
     float slideBufferTimer;               // cuenta atrás de la pulsación recordada
 
-    public LayerMask walkableMask;       // capa Walkable (rampas y techos de tren)
+    public LayerMask walkableMask;       // capa Walkable (rampas y techos)
     public float stepHeight = 0.6f;      // desnivel máximo que sube pegado al suelo
 
     public Animator animator;            // el Animator de AJ
@@ -80,13 +80,7 @@ public class PlayerController : MonoBehaviour
         int newLane = Mathf.Clamp(currentLane + direction, 0, 3); // Clamp: que no pase de 0 ni de 3
         if (newLane == currentLane) return;                       // estaba en el borde
 
-        // si el suelo del carril nuevo está mucho más alto, es la pared de un tren: chocas
-        if (GetFloorY(LaneX(newLane)) - transform.position.y > stepHeight)
-        {
-            GameManager.Instance.GameOver();
-            return;
-        }
-
+        // me muevo siempre; si choco con el lateral de un vehículo, el trigger de Matar me mata
         currentLane = newLane; // el movimiento suave lo hace Move()
     }
 
@@ -142,7 +136,7 @@ public class PlayerController : MonoBehaviour
     }
 
     // altura del suelo en una X. Lanzo un rayo hacia abajo desde arriba:
-    // si toca una rampa o un techo de tren (Walkable), esa es la altura; si no, el suelo normal
+    // si toca una rampa o un techo (Walkable), esa es la altura; si no, el suelo normal
     float GetFloorY(float x)
     {
         Vector3 origin = new Vector3(x, groundY + 20f, transform.position.z); // 20 m por encima
@@ -178,7 +172,7 @@ public class PlayerController : MonoBehaviour
             }
             else if (diff < 0f)
             {
-                // el suelo está mucho más abajo: se acabó el techo del tren, caigo
+                // el suelo está mucho más abajo: se acabó el techo, caigo
                 isGrounded = false;
                 verticalVelocity = 0f;
                 animator.SetBool("IsGrounded", false);

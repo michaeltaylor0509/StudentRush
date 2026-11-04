@@ -2,32 +2,31 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
-// El "cerebro" del juego: sabe si estamos jugando, en pausa o hemos perdido.
+// El "cerebro" del juego: estado y velocidad del mundo.
 public class GameManager : MonoBehaviour
 {
-    // Esto permite que otros scripts escriban GameManager.Instance para hablar con él
-    public static GameManager Instance;
+    public static GameManager Instance;     // para llamarlo desde cualquier script
 
-    public float speed = 10f;        // Velocidad del mundo (metros por segundo)
-    public PlayerController player;  // El jugador, para hacerle caer al perder
+    public float speed = 10f;               // velocidad del mundo (m/s)
+    public PlayerController player;         // para hacerle caer al perder
 
-    public bool isPaused = false;    // ¿Está en pausa? booleano para verlo empieza en no (false)
-    public bool isGameOver = false;  // ¿Hemos perdido? aqui lo mismo
-    public float distance = 0f;      // Metros recorridos esto servirá para la puntuaciónm
+    public bool isPaused = false;
+    public bool isGameOver = false;
+    public float distance = 0f;             // metros recorridos
 
-    private void Awake()
+    void Awake()
     {
         Instance = this;
-        Time.timeScale = 1f; // El tiempo corre normal a velocidad x1
+        Time.timeScale = 1f;                 // por si venimos de una pausa
     }
 
-    // ¿Se está jugando? booleano de si está jugando, si no estamos en pausa ni hemos perdido
+    // se juega si no hay pausa ni game over
     public bool IsPlaying()
     {
         return !isPaused && !isGameOver;
     }
 
-    // un get de obtener la velocidad y si no se esta jugando no tiene velocidad
+    // velocidad del mundo: la normal si jugamos, 0 si no
     public float GetSpeed()
     {
         if (IsPlaying())
@@ -35,54 +34,47 @@ public class GameManager : MonoBehaviour
         return 0f;
     }
 
-    private void Update()
+    void Update()
     {
-        // Sumamos los metros recorridos
-        distance += GetSpeed() * Time.deltaTime;
+        if (IsPlaying())
+            distance += GetSpeed() * Time.deltaTime;
 
         Keyboard kb = Keyboard.current;
 
-        // Esc para pausar o continuar && solo si no hemos perdido)
+        // Esc: pausar o continuar (solo si no has perdido)
         if (kb.escapeKey.wasPressedThisFrame && !isGameOver)
         {
-            if (isPaused)
-                Resume();
-            else
-                Pause();
+            if (isPaused) Resume();
+            else Pause();
         }
 
-        // R para reiniciar && en pausa o al perder
+        // R: reiniciar (en pausa o al perder)
         if (kb.rKey.wasPressedThisFrame && !IsPlaying())
-        {
             Restart();
-        }
     }
 
     public void Pause()
     {
         isPaused = true;
-        Time.timeScale = 0f; // Congela el tiempo
-        // aqui irá en el futuro lo de los menús
+        Time.timeScale = 0f; // congela el tiempo
     }
 
     public void Resume()
     {
         isPaused = false;
-        Time.timeScale = 1f; // Descongela el tiempo
-        // aqui irá en un futuro lo de los menús
+        Time.timeScale = 1f;
     }
 
     public void GameOver()
     {
-        if (isGameOver) return; // Si ya hemos perdido no hacemos nada
+        if (isGameOver) return; // para que no se ejecute dos veces
 
         isGameOver = true;
         player.Die();
     }
 
-    // Vuelve a cargar la escena desde cero
     public void Restart()
     {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name); // reiniciar
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 }

@@ -2,11 +2,14 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // Pone las calles una detrás de otra y las mueve hacia el jugador.
-// Las que quedan atrás se apagan y se reutilizan (pooling).
+// Las que quedan atrás se apagan y se reutilizan.
 public class ScenerySpawner : MonoBehaviour
 {
-    public GameObject[] streetPrefabs;    // calles con obstáculos
-    public GameObject emptyStreetPrefab;  // calle sin obstáculos
+    public GameObject[] streetPrefabs;    // las calles (sin la Inicial)
+    public float[] weights;               // más peso = sale más (uno por calle)
+    public int[] maxInARow;               // máximo de veces seguidas (uno por calle)
+
+    public GameObject emptyStreetPrefab;  // calle Inicial, sin obstáculos
     public int startEmptyTiles = 3;       // calles vacías al empezar
     public float tileScale = 3f;          // tamaño de las calles
 
@@ -18,11 +21,12 @@ public class ScenerySpawner : MonoBehaviour
     public float startZ = -10f;           // dónde empieza la primera
     public float recycleZ = -45f;         // si una calle pasa de aquí, se apaga
 
-    List<GameObject> active = new List<GameObject>(); // calles en pantalla, en orden
-    List<GameObject> stored = new List<GameObject>(); // calles apagadas, para reutilizar
-    float nextZ;                                      // dónde empieza la siguiente calle
-    int placedCount;                                  // cuántas calles he puesto
-    GameObject lastPrefab;                            // la última elegida, para no repetirla
+    List<GameObject> active = new List<GameObject>(); // calles en pantalla
+    List<GameObject> stored = new List<GameObject>(); // calles apagadas
+    float nextZ;                                      // dónde empieza la siguiente
+    int placedCount;                                  // cuántas he puesto
+    int lastType = -1;                                // tipo de la última calle
+    int repeats = 0;                                  // veces seguidas que ha salido
 
     void Start()
     {
@@ -38,7 +42,7 @@ public class ScenerySpawner : MonoBehaviour
         // muevo todas las calles hacia el jugador
         foreach (GameObject street in active)
             street.transform.position += Vector3.back * move;
-        nextZ -= move; // el final de la fila también se acerca
+        nextZ -= move;
 
         // si la primera ya quedó detrás, la apago y la guardo
         if (active.Count > 0 && active[0].transform.position.z + streetLength < recycleZ)
@@ -57,30 +61,49 @@ public class ScenerySpawner : MonoBehaviour
     {
         while (nextZ < viewDistance)
         {
-            GameObject street = GetStreet(ChoosePrefab());
+            GameObject prefab;
 
+            // las primeras son vacías, después elijo con pesos
+            if (placedCount < startEmptyTiles)
+                prefab = emptyStreetPrefab;
+            else
+                prefab = streetPrefabs[ChooseStreet()];
+
+            GameObject street = GetStreet(prefab);
             street.transform.position = new Vector3(offsetX, offsetY, nextZ);
             street.SetActive(true);
 
             active.Add(street);
-            nextZ += streetLength; // la siguiente empieza donde acaba esta
+            nextZ += streetLength;
             placedCount++;
         }
     }
 
-    // las primeras son vacías, después al azar sin repetir la anterior
-    GameObject ChoosePrefab()
+    // devuelve el número de la calle elegida (ruleta con pesos)
+    int ChooseStreet()
     {
-        if (placedCount < startEmptyTiles && emptyStreetPrefab != null)
-            return emptyStreetPrefab;
+        // 1) sumo los pesos de las calles permitidas
+        float total = 0f;
+        for (int i = 0; i < streetPrefabs.Length; i++)
+        {
+            if (i == lastType && repeats >= maxInARow[i]) continue; // ya salió demasiadas veces seguidas
+            total += weights[i];
+        }
 
-        GameObject chosen = streetPrefabs[Random.Range(0, streetPrefabs.Length)];
+        // 2) saco un número al azar y voy restando pesos hasta llegar a 0
+        float r = Random.Range(0f, total);
+        int chosen = 0;
+        for (int i = 0; i < streetPrefabs.Length; i++)
+        {
+            if (i == lastType && repeats >= maxInARow[i]) continue;
+            r -= weights[i];
+            if (r <= 0f) { chosen = i; break; }
+        }
 
-        // si sale la misma que la anterior, vuelvo a elegir
-        while (streetPrefabs.Length > 1 && chosen == lastPrefab)
-            chosen = streetPrefabs[Random.Range(0, streetPrefabs.Length)];
+        // 3) apunto cuántas veces seguidas sale
+        if (chosen == lastType) repeats++;
+        else { lastType = chosen; repeats = 1; }
 
-        lastPrefab = chosen;
         return chosen;
     }
 
@@ -89,15 +112,14 @@ public class ScenerySpawner : MonoBehaviour
     {
         foreach (GameObject s in stored)
         {
-            // las copias que crea Unity se llaman "NombreDelPrefab(Clone)"
-            if (s.name == prefab.name + "(Clone)")
+            if (s.name == prefab.name + "(Clone)") // así llama Unity a las copias
             {
                 stored.Remove(s);
                 return s;
             }
         }
 
-        GameObject go = Instantiate(prefab, transform); // la creo dentro del spawner
+        GameObject go = Instantiate(prefab, transform);
         go.transform.localScale = Vector3.one * tileScale;
         return go;
     }
