@@ -1,5 +1,5 @@
 using UnityEngine;
-using UnityEngine.InputSystem; // para leer el teclado
+using UnityEngine.InputSystem; // para leer teclado y mando
 
 // Controla al jugador: carriles, salto y deslizar.
 // El jugador no avanza en Z, el mundo viene hacia él.
@@ -63,13 +63,34 @@ public class PlayerController : MonoBehaviour
 
     void ReadInput()
     {
-        Keyboard kb = Keyboard.current;
-
         // wasPressedThisFrame = se ha pulsado en este frame (una vez, no mientras la mantienes)
-        if (kb.aKey.wasPressedThisFrame || kb.leftArrowKey.wasPressedThisFrame) ChangeLane(-1);
-        if (kb.dKey.wasPressedThisFrame || kb.rightArrowKey.wasPressedThisFrame) ChangeLane(1);
-        if (kb.spaceKey.wasPressedThisFrame || kb.wKey.wasPressedThisFrame || kb.upArrowKey.wasPressedThisFrame) Jump();
-        if (kb.sKey.wasPressedThisFrame || kb.downArrowKey.wasPressedThisFrame) Slide();
+        Keyboard kb = Keyboard.current; // teclado (null si no hay)
+        Gamepad pad = Gamepad.current;  // mando (null si no hay ninguno conectado)
+
+        // empiezan en false; el teclado o el mando los ponen en true
+        bool left = false, right = false, up = false, down = false;
+
+        if (kb != null)
+        {
+            left = kb.aKey.wasPressedThisFrame || kb.leftArrowKey.wasPressedThisFrame;
+            right = kb.dKey.wasPressedThisFrame || kb.rightArrowKey.wasPressedThisFrame;
+            up = kb.spaceKey.wasPressedThisFrame || kb.wKey.wasPressedThisFrame || kb.upArrowKey.wasPressedThisFrame;
+            down = kb.sKey.wasPressedThisFrame || kb.downArrowKey.wasPressedThisFrame;
+        }
+
+        // el "||" significa "o": vale lo que pulses en el teclado o en el mando
+        if (pad != null)
+        {
+            left = left || pad.dpad.left.wasPressedThisFrame || pad.leftStick.left.wasPressedThisFrame;
+            right = right || pad.dpad.right.wasPressedThisFrame || pad.leftStick.right.wasPressedThisFrame;
+            up = up || pad.dpad.up.wasPressedThisFrame || pad.leftStick.up.wasPressedThisFrame || pad.buttonSouth.wasPressedThisFrame; // A / Cruz
+            down = down || pad.dpad.down.wasPressedThisFrame || pad.leftStick.down.wasPressedThisFrame || pad.buttonEast.wasPressedThisFrame; // B / Círculo
+        }
+
+        if (left) ChangeLane(-1);
+        if (right) ChangeLane(1);
+        if (up) Jump();
+        if (down) Slide();
     }
 
     // direction: -1 izquierda, 1 derecha
@@ -198,7 +219,7 @@ public class PlayerController : MonoBehaviour
                 animator.SetBool("IsGrounded", true);
                 animator.ResetTrigger("Jump"); // borro saltos pendientes
 
-                // si pulsé S justo antes de aterrizar, deslizo ya
+                // si pulsé deslizar justo antes de aterrizar, deslizo ya
                 if (slideBufferTimer > 0f)
                 {
                     slideBufferTimer = 0f;
